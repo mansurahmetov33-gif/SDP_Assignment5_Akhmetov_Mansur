@@ -1,4 +1,4 @@
-package org.delivery;
+package org.delivery.model;
 
 public class RouteDecision {
 }
