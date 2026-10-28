@@ -1,0 +1,112 @@
+
+@startuml
+skinparam classAttributeIconSize 0
+
+interface RouteStrategy {
+    +selectRoute(routes, request): Route
+    +getStrategyName(): String
+}
+
+class FastestRouteStrategy
+class CheapestRouteStrategy
+class EcoFriendlyRouteStrategy
+class BalancedRouteStrategy {
+    -timeWeight: double
+    -costWeight: double
+    -distanceWeight: double
+    -emissionWeight: double
+}
+class DistanceFirstRouteStrategy
+
+class RoutePlanner {
+    -strategy: RouteStrategy
+    +setStrategy(strategy): void
+    +plan(routes, request): Route
+}
+
+class StrategySelector {
+    -strategies: Map
+    +selectStrategy(request): RouteStrategy
+    +registerStrategy(priority, strategy): void
+}
+
+class Route {
+    +id: String
+    +distanceKm: double
+    +estimatedMinutes: int
+    +cost: double
+    +carbonEmission: double
+    +trafficMultiplier: double
+    +available: boolean
+    +effectiveMinutes(): double
+}
+
+class Location {
+    +name: String
+    +latitude: double
+    +longitude: double
+}
+
+class DeliveryRequest {
+    +priority: DeliveryPriority
+    +maxBudget: double
+    +maxDeliveryMinutes: int
+    +ecoPreferred: boolean
+}
+
+enum DeliveryPriority {
+    URGENT
+    ECONOMY
+    ECO
+    STANDARD
+}
+
+class RouteDecision {
+    +strategyName: String
+    +selectedRoute: Route
+    +totalCost: double
+    +estimatedTime: double
+    +explanation: String
+}
+
+class RouteValidator {
+    +isValid(route, request): boolean
+    +filterValidRoutes(routes, request): List
+}
+
+class RouteCostCalculator {
+    +calculate(route, request): double
+}
+
+class RouteDecisionService {
+    +explain(strategy, routes, request): RouteDecision
+}
+
+class StrategyComparison {
+    +compare(routes, request): void
+}
+
+RouteStrategy <|.. FastestRouteStrategy
+RouteStrategy <|.. CheapestRouteStrategy
+RouteStrategy <|.. EcoFriendlyRouteStrategy
+RouteStrategy <|.. BalancedRouteStrategy
+RouteStrategy <|.. DistanceFirstRouteStrategy
+
+RoutePlanner --> RouteStrategy : uses
+StrategySelector --> RouteStrategy : selects
+StrategyComparison --> RouteStrategy : compares
+RouteDecisionService --> RouteStrategy : evaluates
+RouteDecisionService --> RouteDecision : creates
+
+RouteStrategy ..> Route : selects
+RouteStrategy ..> DeliveryRequest : uses
+
+Route --> Location : origin / destination
+DeliveryRequest --> DeliveryPriority
+RouteDecision --> Route
+
+RouteValidator ..> RouteCostCalculator
+RouteValidator ..> Route
+RouteValidator ..> DeliveryRequest
+
+@enduml

@@ -1,0 +1,36 @@
+
+@startuml
+actor Client
+
+participant StrategySelector
+participant RoutePlanner
+participant FastestRouteStrategy
+participant RouteValidator
+participant RouteDecisionService
+
+Client -> StrategySelector : selectStrategy(urgentRequest)
+StrategySelector --> Client : FastestRouteStrategy
+
+Client -> RoutePlanner : setStrategy(fastestStrategy)
+Client -> RoutePlanner : plan(routes, urgentRequest)
+
+RoutePlanner -> FastestRouteStrategy : selectRoute(routes, request)
+
+FastestRouteStrategy -> RouteValidator : filterValidRoutes(routes, request)
+RouteValidator --> FastestRouteStrategy : validRoutes
+
+FastestRouteStrategy -> FastestRouteStrategy : Find minimum effective time
+FastestRouteStrategy --> RoutePlanner : selectedRoute
+
+RoutePlanner --> Client : selectedRoute
+
+Client -> RouteDecisionService : explain(strategy, routes, request)
+RouteDecisionService -> RouteValidator : filterValidRoutes(routes, request)
+RouteValidator --> RouteDecisionService : validRoutes
+
+RouteDecisionService -> FastestRouteStrategy : selectRoute(routes, request)
+FastestRouteStrategy --> RouteDecisionService : selectedRoute
+
+RouteDecisionService --> Client : RouteDecision
+
+@enduml
