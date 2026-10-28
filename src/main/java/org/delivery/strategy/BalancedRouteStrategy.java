@@ -4,7 +4,8 @@ package org.delivery.strategy;
 import org.delivery.exception.NoSuitableRouteException;
 import org.delivery.model.DeliveryRequest;
 import org.delivery.model.Route;
-
+import org.delivery.service.RouteValidator;
+import org.delivery.service.RouteCostCalculator;
 import java.util.Comparator;
 import java.util.List;
 
@@ -46,24 +47,14 @@ public class BalancedRouteStrategy implements RouteStrategy {
                 && weight <= 1;
     }
 
+
     @Override
     public Route selectRoute(
             List<Route> routes,
             DeliveryRequest request
     ) {
-        if (routes == null || request == null) {
-            throw new IllegalArgumentException(
-                    "Routes and request cannot be null");
-        }
-
-        List<Route> validRoutes = routes.stream()
-                .filter(Route::available)
-                .filter(route ->
-                        route.cost() <= request.maxBudget())
-                .filter(route ->
-                        route.effectiveMinutes()
-                                <= request.maxDeliveryMinutes())
-                .toList();
+        List<Route> validRoutes =
+                RouteValidator.filterValidRoutes(routes, request);
 
         if (validRoutes.isEmpty()) {
             throw new NoSuitableRouteException(
@@ -75,7 +66,8 @@ public class BalancedRouteStrategy implements RouteStrategy {
                 .max().orElse(1);
 
         double maxCost = validRoutes.stream()
-                .mapToDouble(Route::cost)
+                .mapToDouble(route ->
+                        RouteCostCalculator.calculate(route, request))
                 .max().orElse(1);
 
         double maxDistance = validRoutes.stream()
@@ -88,12 +80,17 @@ public class BalancedRouteStrategy implements RouteStrategy {
 
         return validRoutes.stream()
                 .min(Comparator.comparingDouble(route -> {
+
                     double time = maxTime == 0 ? 0
                             : route.effectiveMinutes() / maxTime;
+
                     double cost = maxCost == 0 ? 0
-                            : route.cost() / maxCost;
+                            : RouteCostCalculator.calculate(
+                            route, request) / maxCost;
+
                     double distance = maxDistance == 0 ? 0
                             : route.distanceKm() / maxDistance;
+
                     double emission = maxEmission == 0 ? 0
                             : route.carbonEmission() / maxEmission;
 
@@ -102,8 +99,11 @@ public class BalancedRouteStrategy implements RouteStrategy {
                             + distance * distanceWeight
                             + emission * emissionWeight;
                 }))
-                .orElseThrow();
+                .orElseThrow(() ->
+                        new NoSuitableRouteException(
+                                "No suitable balanced route found"));
     }
+
 
     @Override
     public String getStrategyName() {
